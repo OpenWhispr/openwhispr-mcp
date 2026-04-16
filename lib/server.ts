@@ -142,26 +142,49 @@ export function createServer(apiKey: string): McpServer {
 
   server.tool(
     "list_transcriptions",
-    "List transcription history with cursor pagination",
+    "List transcription history with cursor pagination. Supports filtering by language or linked note.",
     {
       limit: z.number().min(1).max(100).default(50).describe("Number of transcriptions to return"),
       cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+      note_id: z.string().uuid().optional().describe("Filter by linked note ID"),
+      language: z.string().optional().describe("Filter by detected language (e.g. 'en')"),
+      include: z
+        .string()
+        .optional()
+        .describe("Set to 'segments' to include speaker-attributed segments with timestamps"),
     },
-    async ({ limit, cursor }) => {
+    async ({ limit, cursor, note_id, language, include }) => {
       const query: Record<string, string> = { limit: String(limit) };
       if (cursor) query.cursor = cursor;
+      if (note_id) query.note_id = note_id;
+      if (language) query.language = language;
+      if (include) query.include = include;
       return json(await apiRequest({ method: "GET", path: "/transcriptions/list", apiKey, query }));
     }
   );
 
   server.tool(
     "get_transcription",
-    "Get a single transcription by ID",
+    "Get a single transcription by ID, including speaker-attributed segments with timestamps",
     { id: z.string().uuid().describe("The transcription ID") },
     async ({ id }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
         method: "GET",
         path: `/transcriptions/${id}`,
+        apiKey,
+      });
+      return json(data);
+    }
+  );
+
+  server.tool(
+    "get_note_transcript",
+    "Get the transcript for a specific note. Returns structured segments if available, or raw text for older notes.",
+    { id: z.string().uuid().describe("The note ID") },
+    async ({ id }) => {
+      const { data } = await apiRequest<{ data: Record<string, unknown> }>({
+        method: "GET",
+        path: `/notes/${id}/transcript`,
         apiKey,
       });
       return json(data);
