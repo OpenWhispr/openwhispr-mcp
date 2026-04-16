@@ -10,6 +10,17 @@ Hosted at `https://mcp.openwhispr.com/mcp`
 
 Generate an API key from the OpenWhispr desktop app under **Settings > API Keys**. Your key starts with `owk_live_`.
 
+### Alternative: Agent self-setup
+
+AI assistants can create their own API key without the desktop app:
+
+1. **Request a code**: `POST https://api.openwhispr.com/api/v1/auth/email-code` with `{"email": "your@email.com"}`
+2. **Enter the code**: Check your email for a 6-digit verification code
+3. **Verify**: `POST https://api.openwhispr.com/api/v1/auth/email-code/verify` with `{"email": "...", "code": "123456"}`
+4. **Create a key**: `POST https://api.openwhispr.com/api/v1/keys/create` with `Authorization: Bearer owt_...` and `{"name": "My Agent", "scopes": ["notes:read", "notes:write"]}`
+
+The returned `owk_live_` key works the same as one created in the desktop app.
+
 ### 2. Connect your AI assistant
 
 #### Claude Code

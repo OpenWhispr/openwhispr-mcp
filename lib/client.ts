@@ -35,6 +35,17 @@ export async function apiRequest<T>(opts: RequestOptions): Promise<T> {
 
   const json = await res.json();
 
+  if (res.status === 401) {
+    throw new Error(
+      "Authentication required. To get an API key:\n" +
+        '1. POST https://api.openwhispr.com/api/v1/auth/email-code with {"email": "your@email.com"}\n' +
+        "2. Check your email for a 6-digit code\n" +
+        '3. POST https://api.openwhispr.com/api/v1/auth/email-code/verify with {"email": "...", "code": "123456"}\n' +
+        "4. POST https://api.openwhispr.com/api/v1/keys/create with Bearer token from step 3\n" +
+        "5. Use the returned API key for all future requests"
+    );
+  }
+
   if (!res.ok) {
     const err = json as ApiError;
     throw new Error(err.error?.message || `API error ${res.status}`);
