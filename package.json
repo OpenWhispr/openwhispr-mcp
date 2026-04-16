@@ -1,0 +1,28 @@
+{
+  "name": "@openwhispr/mcp-server",
+  "version": "1.0.0",
+  "description": "OpenWhispr MCP server — access your notes, folders, transcriptions, and usage via AI assistants",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "eslint . && tsc --noEmit",
+    "format": "eslint --fix . && prettier --write .",
+    "format:check": "eslint . && prettier --check ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@vercel/node": "^5.1.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.54.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
