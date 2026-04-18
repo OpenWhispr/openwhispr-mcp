@@ -68,7 +68,19 @@ Add to your MCP config (`~/.cursor/mcp.json` or VS Code MCP settings):
 | `create_folder`       | Create a new folder                                             |
 | `list_transcriptions` | List transcription history                                      |
 | `get_transcription`   | Get a single transcription by ID                                |
+| `get_note_transcript` | Get the transcript for a specific note with structured segments |
 | `get_usage`           | Get usage stats, word counts, and plan details                  |
+
+## Required Scopes
+
+Create the API key with only the scopes you need:
+
+| Scope                 | Tools                                                                      |
+| --------------------- | -------------------------------------------------------------------------- |
+| `notes:read`          | `list_notes`, `get_note`, `search_notes`, `list_folders`, `get_note_transcript` |
+| `notes:write`         | `create_note`, `update_note`, `delete_note`, `create_folder`               |
+| `transcriptions:read` | `list_transcriptions`, `get_transcription`                                 |
+| `usage:read`          | `get_usage`                                                                |
 
 ## Example Prompts
 
