@@ -1,7 +1,7 @@
 {
   "name": "@openwhispr/mcp-server",
   "version": "1.0.0",
-  "description": "OpenWhispr MCP server — access your notes, folders, transcriptions, and usage via AI assistants",
+  "description": "OpenWhispr MCP server \u2014 access your notes, folders, transcriptions, and usage via AI assistants",
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit",
@@ -24,5 +24,12 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "hono@4": "^4.12.25",
+    "fast-uri@3": "^3.1.2",
+    "undici@5": "^6.27.0",
+    "minimatch@10": "^10.2.3",
+    "path-to-regexp@6": "^6.3.0"
   }
 }
