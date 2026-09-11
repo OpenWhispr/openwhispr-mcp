@@ -1,6 +1,6 @@
 # OpenWhispr MCP Server
 
-Remote MCP server for accessing your OpenWhispr notes, folders, transcriptions, and usage stats from any AI assistant that supports the Model Context Protocol.
+Remote MCP server for accessing your OpenWhispr notes, folders, transcriptions, dictionary, snippets, and usage stats from any AI assistant that supports the Model Context Protocol.
 
 Hosted at `https://mcp.openwhispr.com/mcp`
 
@@ -17,7 +17,7 @@ AI assistants can create their own API key without the desktop app:
 1. **Request a code**: `POST https://api.openwhispr.com/api/v1/auth/email-code` with `{"email": "your@email.com"}`
 2. **Enter the code**: Check your email for a 6-digit verification code
 3. **Verify**: `POST https://api.openwhispr.com/api/v1/auth/email-code/verify` with `{"email": "...", "code": "123456"}`
-4. **Create a key**: `POST https://api.openwhispr.com/api/v1/keys/create` with `Authorization: Bearer owt_...` and `{"name": "My Agent", "scopes": ["notes:read", "notes:write"]}`
+4. **Create a key**: `POST https://api.openwhispr.com/api/v1/keys/create` with `Authorization: Bearer owt_...` and `{"name": "My Agent", "scopes": ["notes:read", "notes:write", "dictionary:write", "snippets:write"]}`
 
 The returned `owk_live_` key works the same as one created in the desktop app.
 
@@ -56,31 +56,43 @@ Add to your MCP config (`~/.cursor/mcp.json` or VS Code MCP settings):
 
 ## Available Tools
 
-| Tool                  | Description                                                     |
-| --------------------- | --------------------------------------------------------------- |
-| `list_notes`          | List notes with optional folder filtering and cursor pagination |
-| `get_note`            | Get a single note by ID                                         |
-| `create_note`         | Create a new note                                               |
-| `update_note`         | Update a note's title, content, or folder                       |
-| `delete_note`         | Delete a note                                                   |
-| `search_notes`        | Semantic and full-text search across notes                      |
-| `list_folders`        | List all folders                                                |
-| `create_folder`       | Create a new folder                                             |
-| `list_transcriptions` | List transcription history                                      |
-| `get_transcription`   | Get a single transcription by ID                                |
-| `get_note_transcript` | Get the transcript for a specific note with structured segments |
-| `get_usage`           | Get usage stats, word counts, and plan details                  |
+| Tool                     | Description                                                          |
+| ------------------------ | -------------------------------------------------------------------- |
+| `list_notes`             | List notes with optional folder filtering and cursor pagination      |
+| `get_note`               | Get a single note by ID                                              |
+| `create_note`            | Create a new note                                                    |
+| `update_note`            | Update a note's title, content, or folder                            |
+| `delete_note`            | Delete a note                                                        |
+| `search_notes`           | Semantic and full-text search across notes                           |
+| `list_folders`           | List all folders                                                     |
+| `create_folder`          | Create a new folder                                                  |
+| `list_transcriptions`    | List transcription history                                           |
+| `get_transcription`      | Get a single transcription by ID                                     |
+| `get_note_transcript`    | Get the transcript for a specific note with structured segments      |
+| `list_dictionary`        | List custom dictionary words that transcription should spell exactly |
+| `add_dictionary_words`   | Add words, names, or jargon to the dictionary                        |
+| `update_dictionary_word` | Change the spelling of a dictionary entry                            |
+| `delete_dictionary_word` | Remove a word from the dictionary                                    |
+| `list_snippets`          | List snippets: spoken triggers that expand into saved text           |
+| `create_snippet`         | Create a snippet                                                     |
+| `update_snippet`         | Update a snippet's trigger or replacement                            |
+| `delete_snippet`         | Delete a snippet                                                     |
+| `get_usage`              | Get usage stats, word counts, and plan details                       |
 
 ## Required Scopes
 
 Create the API key with only the scopes you need:
 
-| Scope                 | Tools                                                                      |
-| --------------------- | -------------------------------------------------------------------------- |
+| Scope                 | Tools                                                                           |
+| --------------------- | ------------------------------------------------------------------------------- |
 | `notes:read`          | `list_notes`, `get_note`, `search_notes`, `list_folders`, `get_note_transcript` |
-| `notes:write`         | `create_note`, `update_note`, `delete_note`, `create_folder`               |
-| `transcriptions:read` | `list_transcriptions`, `get_transcription`                                 |
-| `usage:read`          | `get_usage`                                                                |
+| `notes:write`         | `create_note`, `update_note`, `delete_note`, `create_folder`                    |
+| `transcriptions:read` | `list_transcriptions`, `get_transcription`                                      |
+| `dictionary:read`     | `list_dictionary`                                                               |
+| `dictionary:write`    | `add_dictionary_words`, `update_dictionary_word`, `delete_dictionary_word`      |
+| `snippets:read`       | `list_snippets`                                                                 |
+| `snippets:write`      | `create_snippet`, `update_snippet`, `delete_snippet`                            |
+| `usage:read`          | `get_usage`                                                                     |
 
 ## Example Prompts
 
@@ -89,6 +101,9 @@ Create the API key with only the scopes you need:
 - "Create a note titled 'Project Ideas' in my Work folder"
 - "How many words have I used this month?"
 - "List my transcriptions from today"
+- "Add 'Orukeet' and 'Parakeet' to my dictionary"
+- "Remove duplicate or misspelled words from my dictionary"
+- "Create a snippet so saying 'my address' inserts my mailing address"
 
 ## Development
 
