@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       name: "OpenWhispr",
       version: "1.0.0",
       description:
-        "Access your OpenWhispr notes, folders, transcriptions, dictionary, snippets, and usage stats",
+        "Access your OpenWhispr notes, folders, transcriptions, dictionary, snippets, and usage stats, and transcribe audio with OpenWhispr Cloud",
     });
     return;
   }

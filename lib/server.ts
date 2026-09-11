@@ -8,6 +8,18 @@ function json(data: unknown): ToolResult {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 }
 
+const MAX_AUDIO_BYTES = 3 * 1024 * 1024;
+
+const AUDIO_EXTENSIONS: Record<string, string> = {
+  "audio/wav": "wav",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/m4a": "m4a",
+  "audio/ogg": "ogg",
+  "audio/flac": "flac",
+  "audio/webm": "webm",
+};
+
 export function createServer(apiKey: string): McpServer {
   const server = new McpServer({ name: "OpenWhispr", version: "1.0.0" });
 
@@ -322,6 +334,59 @@ export function createServer(apiKey: string): McpServer {
     async ({ id }) => {
       await apiRequest({ method: "DELETE", path: `/snippets/${id}`, apiKey });
       return json({ deleted: true, id });
+    }
+  );
+
+  server.tool(
+    "transcribe_audio",
+    "Transcribe a short audio clip (up to 3 MB) with OpenWhispr Cloud. Beta: requires a Pro or Business plan and the transcriptions:write scope; 600 minutes per month. For longer files use the OpenWhispr CLI, which can also transcribe locally for free.",
+    {
+      audio_base64: z
+        .string()
+        .min(1)
+        .describe(
+          "Base64-encoded audio (wav, mp3, m4a, ogg, flac, or webm). Maximum 3 MB decoded."
+        ),
+      mime_type: z.enum([
+        "audio/wav",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/ogg",
+        "audio/flac",
+        "audio/webm",
+      ]),
+      language: z.string().optional().describe("Language code (e.g. 'en' or 'pt-BR')"),
+      prompt: z.string().optional().describe("Names or jargon to spell correctly"),
+    },
+    async ({ audio_base64, mime_type, language, prompt }) => {
+      const bytes = new Uint8Array(Buffer.from(audio_base64, "base64"));
+      if (bytes.length > MAX_AUDIO_BYTES) {
+        const size = (bytes.length / (1024 * 1024)).toFixed(1);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Audio is ${size} MB; the limit is 3 MB. Use the OpenWhispr CLI for longer recordings.`,
+            },
+          ],
+        };
+      }
+      const form = new FormData();
+      form.append(
+        "file",
+        new Blob([bytes], { type: mime_type }),
+        `clip.${AUDIO_EXTENSIONS[mime_type]}`
+      );
+      if (language) form.append("language", language);
+      if (prompt) form.append("prompt", prompt);
+      const { data } = await apiRequest<{ data: Record<string, unknown> }>({
+        method: "POST",
+        path: "/transcribe",
+        apiKey,
+        form,
+      });
+      return json(data);
     }
   );
 

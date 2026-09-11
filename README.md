@@ -77,22 +77,26 @@ Add to your MCP config (`~/.cursor/mcp.json` or VS Code MCP settings):
 | `create_snippet`         | Create a snippet                                                     |
 | `update_snippet`         | Update a snippet's trigger or replacement                            |
 | `delete_snippet`         | Delete a snippet                                                     |
+| `transcribe_audio`       | Transcribe a short audio clip with OpenWhispr Cloud (beta)           |
 | `get_usage`              | Get usage stats, word counts, and plan details                       |
+
+**Beta:** `transcribe_audio` accepts clips up to 3 MB (wav, mp3, m4a, ogg, flac, or webm), requires a Pro or Business plan, and is limited to 600 minutes per month. Limits and response shape may change during the beta. For longer files use the [OpenWhispr CLI](https://www.npmjs.com/package/@openwhispr/cli), which can also transcribe locally for free.
 
 ## Required Scopes
 
 Create the API key with only the scopes you need:
 
-| Scope                 | Tools                                                                           |
-| --------------------- | ------------------------------------------------------------------------------- |
-| `notes:read`          | `list_notes`, `get_note`, `search_notes`, `list_folders`, `get_note_transcript` |
-| `notes:write`         | `create_note`, `update_note`, `delete_note`, `create_folder`                    |
-| `transcriptions:read` | `list_transcriptions`, `get_transcription`                                      |
-| `dictionary:read`     | `list_dictionary`                                                               |
-| `dictionary:write`    | `add_dictionary_words`, `update_dictionary_word`, `delete_dictionary_word`      |
-| `snippets:read`       | `list_snippets`                                                                 |
-| `snippets:write`      | `create_snippet`, `update_snippet`, `delete_snippet`                            |
-| `usage:read`          | `get_usage`                                                                     |
+| Scope                  | Tools                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| `notes:read`           | `list_notes`, `get_note`, `search_notes`, `list_folders`, `get_note_transcript` |
+| `notes:write`          | `create_note`, `update_note`, `delete_note`, `create_folder`                    |
+| `transcriptions:read`  | `list_transcriptions`, `get_transcription`                                      |
+| `transcriptions:write` | `transcribe_audio`                                                              |
+| `dictionary:read`      | `list_dictionary`                                                               |
+| `dictionary:write`     | `add_dictionary_words`, `update_dictionary_word`, `delete_dictionary_word`      |
+| `snippets:read`        | `list_snippets`                                                                 |
+| `snippets:write`       | `create_snippet`, `update_snippet`, `delete_snippet`                            |
+| `usage:read`           | `get_usage`                                                                     |
 
 ## Example Prompts
 
@@ -104,6 +108,7 @@ Create the API key with only the scopes you need:
 - "Add 'Orukeet' and 'Parakeet' to my dictionary"
 - "Remove duplicate or misspelled words from my dictionary"
 - "Create a snippet so saying 'my address' inserts my mailing address"
+- "Transcribe this voice memo"
 
 ## Development
 
