@@ -9,6 +9,8 @@ function json(data: unknown): ToolResult {
 }
 
 const MAX_AUDIO_BYTES = 3 * 1024 * 1024;
+// Checked on the base64 string so an oversized clip is rejected before it is decoded.
+const MAX_AUDIO_BASE64_CHARS = (MAX_AUDIO_BYTES / 3) * 4;
 
 const AUDIO_EXTENSIONS: Record<string, string> = {
   "audio/wav": "wav",
@@ -360,22 +362,16 @@ export function createServer(apiKey: string): McpServer {
       prompt: z.string().optional().describe("Names or jargon to spell correctly"),
     },
     async ({ audio_base64, mime_type, language, prompt }) => {
-      const bytes = new Uint8Array(Buffer.from(audio_base64, "base64"));
-      if (bytes.length > MAX_AUDIO_BYTES) {
-        const size = (bytes.length / (1024 * 1024)).toFixed(1);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Audio is ${size} MB; the limit is 3 MB. Use the OpenWhispr CLI for longer recordings.`,
-            },
-          ],
-        };
+      if (audio_base64.length > MAX_AUDIO_BASE64_CHARS) {
+        const size = ((audio_base64.length * 3) / 4 / (1024 * 1024)).toFixed(1);
+        throw new Error(
+          `Audio is about ${size} MB, over this tool's 3 MB limit. Trim the clip, or use the OpenWhispr CLI (npm i -g @openwhispr/cli) for longer recordings.`
+        );
       }
       const form = new FormData();
       form.append(
         "file",
-        new Blob([bytes], { type: mime_type }),
+        new Blob([new Uint8Array(Buffer.from(audio_base64, "base64"))], { type: mime_type }),
         `clip.${AUDIO_EXTENSIONS[mime_type]}`
       );
       if (language) form.append("language", language);
