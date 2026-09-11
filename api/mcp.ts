@@ -17,7 +17,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(200).json({
       name: "OpenWhispr",
       version: "1.0.0",
-      description: "Access your OpenWhispr notes, folders, transcriptions, and usage stats",
+      description:
+        "Access your OpenWhispr notes, folders, transcriptions, dictionary, snippets, and usage stats",
     });
     return;
   }

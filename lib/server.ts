@@ -191,6 +191,140 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
+  server.tool(
+    "list_dictionary",
+    "List the user's custom dictionary: words and names that transcription should spell exactly. Paginate with cursor while has_more is true.",
+    {
+      limit: z
+        .number()
+        .min(1)
+        .max(500)
+        .default(200)
+        .describe("Number of entries to return (1-500)"),
+      cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+    },
+    async ({ limit, cursor }) => {
+      const query: Record<string, string> = { limit: String(limit) };
+      if (cursor) query.cursor = cursor;
+      return json(await apiRequest({ method: "GET", path: "/dictionary/list", apiKey, query }));
+    }
+  );
+
+  server.tool(
+    "add_dictionary_words",
+    "Add words, names, or jargon the user wants transcription to spell exactly. Words already in the dictionary are returned rather than duplicated.",
+    {
+      words: z
+        .array(z.string().min(1).max(100))
+        .min(1)
+        .max(200)
+        .describe("Words to add (1-200, each 1-100 characters)"),
+    },
+    async (input) => {
+      const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
+        method: "POST",
+        path: "/dictionary/create",
+        apiKey,
+        body: input,
+      });
+      return json(data);
+    }
+  );
+
+  server.tool(
+    "update_dictionary_word",
+    "Change the spelling of a dictionary entry",
+    {
+      id: z.string().uuid().describe("The dictionary entry ID to update"),
+      word: z.string().min(1).max(100).describe("New spelling"),
+    },
+    async ({ id, ...updates }) => {
+      const { data } = await apiRequest<{ data: Record<string, unknown> }>({
+        method: "PATCH",
+        path: `/dictionary/${id}`,
+        apiKey,
+        body: updates,
+      });
+      return json(data);
+    }
+  );
+
+  server.tool(
+    "delete_dictionary_word",
+    "Remove a word from the dictionary",
+    { id: z.string().uuid().describe("The dictionary entry ID to delete") },
+    async ({ id }) => {
+      await apiRequest({ method: "DELETE", path: `/dictionary/${id}`, apiKey });
+      return json({ deleted: true, id });
+    }
+  );
+
+  server.tool(
+    "list_snippets",
+    "List the user's snippets: spoken trigger phrases that expand into saved text during dictation. Paginate with cursor while has_more is true.",
+    {
+      limit: z
+        .number()
+        .min(1)
+        .max(500)
+        .default(200)
+        .describe("Number of snippets to return (1-500)"),
+      cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+    },
+    async ({ limit, cursor }) => {
+      const query: Record<string, string> = { limit: String(limit) };
+      if (cursor) query.cursor = cursor;
+      return json(await apiRequest({ method: "GET", path: "/snippets/list", apiKey, query }));
+    }
+  );
+
+  server.tool(
+    "create_snippet",
+    "Create a snippet: a spoken trigger phrase that expands into replacement text during dictation",
+    {
+      trigger: z.string().min(1).max(100).describe("Spoken phrase that triggers the expansion"),
+      replacement: z.string().min(1).max(5000).describe("Text inserted when the trigger is spoken"),
+    },
+    async (input) => {
+      const { data } = await apiRequest<{ data: Record<string, unknown> }>({
+        method: "POST",
+        path: "/snippets/create",
+        apiKey,
+        body: input,
+      });
+      return json(data);
+    }
+  );
+
+  server.tool(
+    "update_snippet",
+    "Update a snippet's trigger phrase or replacement text. Provide at least one field.",
+    {
+      id: z.string().uuid().describe("The snippet ID to update"),
+      trigger: z.string().min(1).max(100).optional().describe("New trigger phrase"),
+      replacement: z.string().min(1).max(5000).optional().describe("New replacement text"),
+    },
+    async ({ id, ...updates }) => {
+      const { data } = await apiRequest<{ data: Record<string, unknown> }>({
+        method: "PATCH",
+        path: `/snippets/${id}`,
+        apiKey,
+        body: updates,
+      });
+      return json(data);
+    }
+  );
+
+  server.tool(
+    "delete_snippet",
+    "Delete a snippet",
+    { id: z.string().uuid().describe("The snippet ID to delete") },
+    async ({ id }) => {
+      await apiRequest({ method: "DELETE", path: `/snippets/${id}`, apiKey });
+      return json({ deleted: true, id });
+    }
+  );
+
   server.tool("get_usage", "Get usage statistics, word counts, and plan details", {}, async () => {
     const { data } = await apiRequest<{ data: Record<string, unknown> }>({
       method: "GET",
