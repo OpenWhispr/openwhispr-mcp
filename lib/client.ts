@@ -5,6 +5,7 @@ interface RequestOptions {
   path: string;
   apiKey: string;
   body?: Record<string, unknown>;
+  form?: FormData;
   query?: Record<string, string>;
 }
 
@@ -28,7 +29,7 @@ export async function apiRequest<T>(opts: RequestOptions): Promise<T> {
       Authorization: `Bearer ${opts.apiKey}`,
       ...(opts.body ? { "Content-Type": "application/json" } : {}),
     },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    body: opts.form ?? (opts.body ? JSON.stringify(opts.body) : undefined),
   });
 
   if (res.status === 204) return undefined as T;
