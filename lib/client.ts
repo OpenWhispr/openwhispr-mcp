@@ -1,5 +1,9 @@
 const DEFAULT_BASE_URL = "https://api.openwhispr.com";
 
+export function apiUrl(path: string): URL {
+  return new URL(`/api/v1${path}`, process.env.OPENWHISPR_API_URL || DEFAULT_BASE_URL);
+}
+
 interface RequestOptions {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   path: string;
@@ -14,8 +18,7 @@ interface ApiError {
 }
 
 export async function apiRequest<T>(opts: RequestOptions): Promise<T> {
-  const baseUrl = process.env.OPENWHISPR_API_URL || DEFAULT_BASE_URL;
-  const url = new URL(`/api/v1${opts.path}`, baseUrl);
+  const url = apiUrl(opts.path);
 
   if (opts.query) {
     for (const [key, value] of Object.entries(opts.query)) {
