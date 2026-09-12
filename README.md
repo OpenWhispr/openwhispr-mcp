@@ -87,7 +87,7 @@ Add to your MCP config (`~/.cursor/mcp.json` or VS Code MCP settings):
 
 ## Required Scopes
 
-OAuth connections are granted every scope below. When using an API key, create it with only the scopes you need:
+OAuth clients ask for scopes when they connect (Claude asks for all of them, and the consent screen shows what was requested). When using an API key, create it with only the scopes you need:
 
 | Scope                  | Tools                                                                           |
 | ---------------------- | ------------------------------------------------------------------------------- |

@@ -94,7 +94,11 @@ export async function validateToken(token: string): Promise<TokenValidation> {
   cache.delete(key);
 
   try {
-    const res = await fetch(apiUrl("/me"), { headers: { Authorization: `Bearer ${token}` } });
+    // Claude gives up on a tool call after 10 s; a hung API must not consume all of it.
+    const res = await fetch(apiUrl("/me"), {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8_000),
+    });
     if (res.status === 401) return { status: "invalid" };
     if (!res.ok) return { status: "unavailable" };
 
