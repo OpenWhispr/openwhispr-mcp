@@ -8,7 +8,9 @@ Hosted at `https://mcp.openwhispr.com/mcp`
 
 ### 1. Get an API key
 
-Generate an API key from the OpenWhispr desktop app under **Settings > API Keys**. Your key starts with `owk_live_`.
+Skip this step if you are connecting from Claude (web, desktop, or mobile): it signs you in with OAuth and never needs an API key.
+
+For other clients, generate an API key from the OpenWhispr desktop app under **Settings > API Keys**. Your key starts with `owk_live_`.
 
 ### Alternative: Agent self-setup
 
@@ -23,19 +25,20 @@ The returned `owk_live_` key works the same as one created in the desktop app.
 
 ### 2. Connect your AI assistant
 
+#### Claude (web, desktop, mobile)
+
+1. Open **Customize > Connectors > Add custom connector**
+2. Paste `https://mcp.openwhispr.com/mcp` and click **Add**
+3. Sign in to OpenWhispr and approve the requested access
+
+No API key is needed. Claude receives a short-lived, scoped token that it refreshes automatically.
+
 #### Claude Code
 
 ```bash
 claude mcp add openwhispr --transport http https://mcp.openwhispr.com/mcp \
   --header "Authorization: Bearer owk_live_YOUR_KEY"
 ```
-
-#### Claude Desktop
-
-Go to **Settings > Integrations > Add MCP Server** and enter:
-
-- **URL:** `https://mcp.openwhispr.com/mcp`
-- **Authorization:** `Bearer owk_live_YOUR_KEY`
 
 #### Cursor / VS Code
 
@@ -84,7 +87,7 @@ Add to your MCP config (`~/.cursor/mcp.json` or VS Code MCP settings):
 
 ## Required Scopes
 
-Create the API key with only the scopes you need:
+OAuth clients ask for scopes when they connect (Claude asks for all of them, and the consent screen shows what was requested). When using an API key, create it with only the scopes you need:
 
 | Scope                  | Tools                                                                           |
 | ---------------------- | ------------------------------------------------------------------------------- |
@@ -110,6 +113,10 @@ Create the API key with only the scopes you need:
 - "Create a snippet so saying 'my address' inserts my mailing address"
 - "Transcribe this voice memo"
 
+## Disconnecting
+
+In Claude, open the connector and choose **Disconnect**. OAuth access tokens expire after 1 hour and are refreshed automatically while the connector is in use; a connector that goes unused for 30 days stops working on its own. API keys are revoked from **Settings > API Keys** in the desktop app.
+
 ## Development
 
 ```bash
@@ -117,4 +124,4 @@ npm install
 npm run build
 ```
 
-Set `OPENWHISPR_API_URL` to override the API base URL for local development.
+Set `OPENWHISPR_API_URL` to override the API base URL for local development. `MCP_RESOURCE_URL` and `OPENWHISPR_AUTH_URL` override the public MCP URL and the OAuth issuer advertised to clients (defaults: `https://mcp.openwhispr.com/mcp`, `https://auth.openwhispr.com`).

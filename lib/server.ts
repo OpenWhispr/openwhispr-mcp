@@ -25,13 +25,17 @@ const AUDIO_EXTENSIONS: Record<string, string> = {
 export function createServer(apiKey: string): McpServer {
   const server = new McpServer({ name: "OpenWhispr", version: "1.0.0" });
 
-  server.tool(
+  server.registerTool(
     "list_notes",
-    "List notes with optional folder filtering and cursor pagination",
     {
-      limit: z.number().min(1).max(100).default(50).describe("Number of notes to return (1-100)"),
-      cursor: z.string().optional().describe("Pagination cursor from a previous response"),
-      folder_id: z.string().uuid().optional().describe("Filter by folder ID"),
+      title: "List notes",
+      description: "List notes with optional folder filtering and cursor pagination",
+      inputSchema: {
+        limit: z.number().min(1).max(100).default(50).describe("Number of notes to return (1-100)"),
+        cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+        folder_id: z.string().uuid().optional().describe("Filter by folder ID"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ limit, cursor, folder_id }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -41,10 +45,14 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_note",
-    "Get a single note by ID",
-    { id: z.string().uuid().describe("The note ID") },
+    {
+      title: "Get note",
+      description: "Get a single note by ID",
+      inputSchema: { id: z.string().uuid().describe("The note ID") },
+      annotations: { readOnlyHint: true },
+    },
     async ({ id }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
         method: "GET",
@@ -55,17 +63,21 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "create_note",
-    "Create a new note",
     {
-      content: z.string().describe("The note content"),
-      title: z.string().optional().describe("Optional title"),
-      note_type: z
-        .enum(["personal", "meeting", "upload"])
-        .default("personal")
-        .describe("Type of note"),
-      folder_id: z.string().uuid().optional().describe("Folder to place the note in"),
+      title: "Create note",
+      description: "Create a new note",
+      inputSchema: {
+        content: z.string().describe("The note content"),
+        title: z.string().optional().describe("Optional title"),
+        note_type: z
+          .enum(["personal", "meeting", "upload"])
+          .default("personal")
+          .describe("Type of note"),
+        folder_id: z.string().uuid().optional().describe("Folder to place the note in"),
+      },
+      annotations: { destructiveHint: false },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -78,15 +90,19 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "update_note",
-    "Update a note's title, content, or folder",
     {
-      id: z.string().uuid().describe("The note ID to update"),
-      title: z.string().optional().describe("New title"),
-      content: z.string().optional().describe("New content"),
-      enhanced_content: z.string().optional().describe("New enhanced/cleaned content"),
-      folder_id: z.string().uuid().optional().describe("Move to a different folder"),
+      title: "Update note",
+      description: "Update a note's title, content, or folder",
+      inputSchema: {
+        id: z.string().uuid().describe("The note ID to update"),
+        title: z.string().optional().describe("New title"),
+        content: z.string().optional().describe("New content"),
+        enhanced_content: z.string().optional().describe("New enhanced/cleaned content"),
+        folder_id: z.string().uuid().optional().describe("Move to a different folder"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ id, ...updates }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -99,22 +115,30 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "delete_note",
-    "Delete a note",
-    { id: z.string().uuid().describe("The note ID to delete") },
+    {
+      title: "Delete note",
+      description: "Delete a note",
+      inputSchema: { id: z.string().uuid().describe("The note ID to delete") },
+      annotations: { destructiveHint: true },
+    },
     async ({ id }) => {
       await apiRequest({ method: "DELETE", path: `/notes/${id}`, apiKey });
       return json({ deleted: true, id });
     }
   );
 
-  server.tool(
+  server.registerTool(
     "search_notes",
-    "Search notes using semantic and full-text search",
     {
-      query: z.string().min(1).max(500).describe("Search query"),
-      limit: z.number().min(1).max(50).default(20).describe("Max results to return"),
+      title: "Search notes",
+      description: "Search notes using semantic and full-text search",
+      inputSchema: {
+        query: z.string().min(1).max(500).describe("Search query"),
+        limit: z.number().min(1).max(50).default(20).describe("Max results to return"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
@@ -127,21 +151,34 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool("list_folders", "List all folders", {}, async () => {
-    const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
-      method: "GET",
-      path: "/folders/list",
-      apiKey,
-    });
-    return json(data);
-  });
-
-  server.tool(
-    "create_folder",
-    "Create a new folder",
+  server.registerTool(
+    "list_folders",
     {
-      name: z.string().min(1).max(100).describe("Folder name"),
-      sort_order: z.number().int().optional().describe("Sort position"),
+      title: "List folders",
+      description: "List all folders",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
+        method: "GET",
+        path: "/folders/list",
+        apiKey,
+      });
+      return json(data);
+    }
+  );
+
+  server.registerTool(
+    "create_folder",
+    {
+      title: "Create folder",
+      description: "Create a new folder",
+      inputSchema: {
+        name: z.string().min(1).max(100).describe("Folder name"),
+        sort_order: z.number().int().optional().describe("Sort position"),
+      },
+      annotations: { destructiveHint: false },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -154,18 +191,28 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "list_transcriptions",
-    "List transcription history with cursor pagination. Supports filtering by language or linked note.",
     {
-      limit: z.number().min(1).max(100).default(50).describe("Number of transcriptions to return"),
-      cursor: z.string().optional().describe("Pagination cursor from a previous response"),
-      note_id: z.string().uuid().optional().describe("Filter by linked note ID"),
-      language: z.string().optional().describe("Filter by detected language (e.g. 'en')"),
-      include: z
-        .string()
-        .optional()
-        .describe("Set to 'segments' to include speaker-attributed segments with timestamps"),
+      title: "List transcriptions",
+      description:
+        "List transcription history with cursor pagination. Supports filtering by language or linked note.",
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .default(50)
+          .describe("Number of transcriptions to return"),
+        cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+        note_id: z.string().uuid().optional().describe("Filter by linked note ID"),
+        language: z.string().optional().describe("Filter by detected language (e.g. 'en')"),
+        include: z
+          .string()
+          .optional()
+          .describe("Set to 'segments' to include speaker-attributed segments with timestamps"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ limit, cursor, note_id, language, include }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -177,10 +224,15 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_transcription",
-    "Get a single transcription by ID, including speaker-attributed segments with timestamps",
-    { id: z.string().uuid().describe("The transcription ID") },
+    {
+      title: "Get transcription",
+      description:
+        "Get a single transcription by ID, including speaker-attributed segments with timestamps",
+      inputSchema: { id: z.string().uuid().describe("The transcription ID") },
+      annotations: { readOnlyHint: true },
+    },
     async ({ id }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
         method: "GET",
@@ -191,10 +243,15 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_note_transcript",
-    "Get the transcript for a specific note. Returns structured segments if available, or raw text for older notes.",
-    { id: z.string().uuid().describe("The note ID") },
+    {
+      title: "Get note transcript",
+      description:
+        "Get the transcript for a specific note. Returns structured segments if available, or raw text for older notes.",
+      inputSchema: { id: z.string().uuid().describe("The note ID") },
+      annotations: { readOnlyHint: true },
+    },
     async ({ id }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
         method: "GET",
@@ -205,17 +262,22 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "list_dictionary",
-    "List the user's custom dictionary: words and names that transcription should spell exactly. Paginate with cursor while has_more is true.",
     {
-      limit: z
-        .number()
-        .min(1)
-        .max(500)
-        .default(200)
-        .describe("Number of entries to return (1-500)"),
-      cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+      title: "List dictionary",
+      description:
+        "List the user's custom dictionary: words and names that transcription should spell exactly. Paginate with cursor while has_more is true.",
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(500)
+          .default(200)
+          .describe("Number of entries to return (1-500)"),
+        cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ limit, cursor }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -224,15 +286,20 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "add_dictionary_words",
-    "Add words, names, or jargon the user wants transcription to spell exactly. Words already in the dictionary are returned rather than duplicated.",
     {
-      words: z
-        .array(z.string().min(1).max(100))
-        .min(1)
-        .max(200)
-        .describe("Words to add (1-200, each 1-100 characters)"),
+      title: "Add dictionary words",
+      description:
+        "Add words, names, or jargon the user wants transcription to spell exactly. Words already in the dictionary are returned rather than duplicated.",
+      inputSchema: {
+        words: z
+          .array(z.string().min(1).max(100))
+          .min(1)
+          .max(200)
+          .describe("Words to add (1-200, each 1-100 characters)"),
+      },
+      annotations: { destructiveHint: false },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
@@ -245,12 +312,16 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "update_dictionary_word",
-    "Change the spelling of a dictionary entry",
     {
-      id: z.string().uuid().describe("The dictionary entry ID to update"),
-      word: z.string().min(1).max(100).describe("New spelling"),
+      title: "Update dictionary word",
+      description: "Change the spelling of a dictionary entry",
+      inputSchema: {
+        id: z.string().uuid().describe("The dictionary entry ID to update"),
+        word: z.string().min(1).max(100).describe("New spelling"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ id, ...updates }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -263,27 +334,36 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "delete_dictionary_word",
-    "Remove a word from the dictionary",
-    { id: z.string().uuid().describe("The dictionary entry ID to delete") },
+    {
+      title: "Delete dictionary word",
+      description: "Remove a word from the dictionary",
+      inputSchema: { id: z.string().uuid().describe("The dictionary entry ID to delete") },
+      annotations: { destructiveHint: true },
+    },
     async ({ id }) => {
       await apiRequest({ method: "DELETE", path: `/dictionary/${id}`, apiKey });
       return json({ deleted: true, id });
     }
   );
 
-  server.tool(
+  server.registerTool(
     "list_snippets",
-    "List the user's snippets: spoken trigger phrases that expand into saved text during dictation. Paginate with cursor while has_more is true.",
     {
-      limit: z
-        .number()
-        .min(1)
-        .max(500)
-        .default(200)
-        .describe("Number of snippets to return (1-500)"),
-      cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+      title: "List snippets",
+      description:
+        "List the user's snippets: spoken trigger phrases that expand into saved text during dictation. Paginate with cursor while has_more is true.",
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(500)
+          .default(200)
+          .describe("Number of snippets to return (1-500)"),
+        cursor: z.string().optional().describe("Pagination cursor from a previous response"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ limit, cursor }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -292,12 +372,21 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "create_snippet",
-    "Create a snippet: a spoken trigger phrase that expands into replacement text during dictation",
     {
-      trigger: z.string().min(1).max(100).describe("Spoken phrase that triggers the expansion"),
-      replacement: z.string().min(1).max(5000).describe("Text inserted when the trigger is spoken"),
+      title: "Create snippet",
+      description:
+        "Create a snippet: a spoken trigger phrase that expands into replacement text during dictation",
+      inputSchema: {
+        trigger: z.string().min(1).max(100).describe("Spoken phrase that triggers the expansion"),
+        replacement: z
+          .string()
+          .min(1)
+          .max(5000)
+          .describe("Text inserted when the trigger is spoken"),
+      },
+      annotations: { destructiveHint: false },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -310,13 +399,18 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "update_snippet",
-    "Update a snippet's trigger phrase or replacement text. Provide at least one field.",
     {
-      id: z.string().uuid().describe("The snippet ID to update"),
-      trigger: z.string().min(1).max(100).optional().describe("New trigger phrase"),
-      replacement: z.string().min(1).max(5000).optional().describe("New replacement text"),
+      title: "Update snippet",
+      description:
+        "Update a snippet's trigger phrase or replacement text. Provide at least one field.",
+      inputSchema: {
+        id: z.string().uuid().describe("The snippet ID to update"),
+        trigger: z.string().min(1).max(100).optional().describe("New trigger phrase"),
+        replacement: z.string().min(1).max(5000).optional().describe("New replacement text"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ id, ...updates }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -329,37 +423,46 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "delete_snippet",
-    "Delete a snippet",
-    { id: z.string().uuid().describe("The snippet ID to delete") },
+    {
+      title: "Delete snippet",
+      description: "Delete a snippet",
+      inputSchema: { id: z.string().uuid().describe("The snippet ID to delete") },
+      annotations: { destructiveHint: true },
+    },
     async ({ id }) => {
       await apiRequest({ method: "DELETE", path: `/snippets/${id}`, apiKey });
       return json({ deleted: true, id });
     }
   );
 
-  server.tool(
+  server.registerTool(
     "transcribe_audio",
-    "Transcribe a short audio clip (up to 3 MB) with OpenWhispr Cloud. Beta: requires a Pro or Business plan and the transcriptions:write scope; 600 minutes per month. For longer files use the OpenWhispr CLI, which can also transcribe locally for free.",
     {
-      audio_base64: z
-        .string()
-        .min(1)
-        .describe(
-          "Base64-encoded audio (wav, mp3, m4a, ogg, flac, or webm). Maximum 3 MB decoded."
-        ),
-      mime_type: z.enum([
-        "audio/wav",
-        "audio/mpeg",
-        "audio/mp4",
-        "audio/m4a",
-        "audio/ogg",
-        "audio/flac",
-        "audio/webm",
-      ]),
-      language: z.string().optional().describe("Language code (e.g. 'en' or 'pt-BR')"),
-      prompt: z.string().optional().describe("Names or jargon to spell correctly"),
+      title: "Transcribe audio",
+      description:
+        "Transcribe a short audio clip (up to 3 MB) with OpenWhispr Cloud. Beta: requires a Pro or Business plan and the transcriptions:write scope; 600 minutes per month. For longer files use the OpenWhispr CLI, which can also transcribe locally for free.",
+      inputSchema: {
+        audio_base64: z
+          .string()
+          .min(1)
+          .describe(
+            "Base64-encoded audio (wav, mp3, m4a, ogg, flac, or webm). Maximum 3 MB decoded."
+          ),
+        mime_type: z.enum([
+          "audio/wav",
+          "audio/mpeg",
+          "audio/mp4",
+          "audio/m4a",
+          "audio/ogg",
+          "audio/flac",
+          "audio/webm",
+        ]),
+        language: z.string().optional().describe("Language code (e.g. 'en' or 'pt-BR')"),
+        prompt: z.string().optional().describe("Names or jargon to spell correctly"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ audio_base64, mime_type, language, prompt }) => {
       if (audio_base64.length > MAX_AUDIO_BASE64_CHARS) {
@@ -386,14 +489,23 @@ export function createServer(apiKey: string): McpServer {
     }
   );
 
-  server.tool("get_usage", "Get usage statistics, word counts, and plan details", {}, async () => {
-    const { data } = await apiRequest<{ data: Record<string, unknown> }>({
-      method: "GET",
-      path: "/usage",
-      apiKey,
-    });
-    return json(data);
-  });
+  server.registerTool(
+    "get_usage",
+    {
+      title: "Get usage",
+      description: "Get usage statistics, word counts, and plan details",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const { data } = await apiRequest<{ data: Record<string, unknown> }>({
+        method: "GET",
+        path: "/usage",
+        apiKey,
+      });
+      return json(data);
+    }
+  );
 
   return server;
 }
