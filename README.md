@@ -119,9 +119,24 @@ In Claude, open the connector and choose **Disconnect**. OAuth access tokens exp
 
 ## Development
 
+### OpenAI directory domain verification
+
+Set `OPENAI_APPS_CHALLENGE` to the exact token supplied by the OpenAI plugin
+submission portal, in the deployment serving `mcp.openwhispr.com`. After an
+authorized deployment, `GET /.well-known/openai-apps-challenge` returns only
+that token as plain text, without caching or a trailing newline. The endpoint
+returns 404 while the variable is unset. Do not commit the token or put it in
+the plugin ZIP. If the host already serves a challenge for another plugin,
+use the portal's allowed parent-domain option instead of replacing its token.
+
+This route does not grant account access or change the MCP OAuth flow.
+
+### Local checks
+
 ```bash
 npm install
 npm run build
+npm test
 ```
 
 Set `OPENWHISPR_API_URL` to override the API base URL for local development. `MCP_RESOURCE_URL` and `OPENWHISPR_AUTH_URL` override the public MCP URL and the OAuth issuer advertised to clients (defaults: `https://mcp.openwhispr.com/mcp`, `https://auth.openwhispr.com`).

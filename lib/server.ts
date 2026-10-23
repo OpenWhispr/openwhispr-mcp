@@ -35,7 +35,12 @@ export function createServer(apiKey: string): McpServer {
         cursor: z.string().optional().describe("Pagination cursor from a previous response"),
         folder_id: z.string().uuid().optional().describe("Filter by folder ID"),
       },
-      annotations: { title: "List notes", readOnlyHint: true },
+      annotations: {
+        title: "List notes",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ limit, cursor, folder_id }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -51,7 +56,12 @@ export function createServer(apiKey: string): McpServer {
       title: "Get note",
       description: "Get a single note by ID",
       inputSchema: { id: z.string().uuid().describe("The note ID") },
-      annotations: { title: "Get note", readOnlyHint: true },
+      annotations: {
+        title: "Get note",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ id }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -77,7 +87,12 @@ export function createServer(apiKey: string): McpServer {
           .describe("Type of note"),
         folder_id: z.string().uuid().optional().describe("Folder to place the note in"),
       },
-      annotations: { title: "Create note", readOnlyHint: false, destructiveHint: false },
+      annotations: {
+        title: "Create note",
+        readOnlyHint: false,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -102,7 +117,12 @@ export function createServer(apiKey: string): McpServer {
         enhanced_content: z.string().optional().describe("New enhanced/cleaned content"),
         folder_id: z.string().uuid().optional().describe("Move to a different folder"),
       },
-      annotations: { title: "Update note", readOnlyHint: false, destructiveHint: true },
+      annotations: {
+        title: "Update note",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ id, ...updates }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -121,7 +141,12 @@ export function createServer(apiKey: string): McpServer {
       title: "Delete note",
       description: "Delete a note",
       inputSchema: { id: z.string().uuid().describe("The note ID to delete") },
-      annotations: { title: "Delete note", readOnlyHint: false, destructiveHint: true },
+      annotations: {
+        title: "Delete note",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ id }) => {
       await apiRequest({ method: "DELETE", path: `/notes/${id}`, apiKey });
@@ -138,7 +163,12 @@ export function createServer(apiKey: string): McpServer {
         query: z.string().min(1).max(500).describe("Search query"),
         limit: z.number().min(1).max(50).default(20).describe("Max results to return"),
       },
-      annotations: { title: "Search notes", readOnlyHint: true },
+      annotations: {
+        title: "Search notes",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
@@ -157,7 +187,12 @@ export function createServer(apiKey: string): McpServer {
       title: "List folders",
       description: "List all folders",
       inputSchema: {},
-      annotations: { title: "List folders", readOnlyHint: true },
+      annotations: {
+        title: "List folders",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async () => {
       const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
@@ -178,7 +213,12 @@ export function createServer(apiKey: string): McpServer {
         name: z.string().min(1).max(100).describe("Folder name"),
         sort_order: z.number().int().optional().describe("Sort position"),
       },
-      annotations: { title: "Create folder", readOnlyHint: false, destructiveHint: false },
+      annotations: {
+        title: "Create folder",
+        readOnlyHint: false,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -212,7 +252,12 @@ export function createServer(apiKey: string): McpServer {
           .optional()
           .describe("Set to 'segments' to include speaker-attributed segments with timestamps"),
       },
-      annotations: { title: "List transcriptions", readOnlyHint: true },
+      annotations: {
+        title: "List transcriptions",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ limit, cursor, note_id, language, include }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -231,7 +276,12 @@ export function createServer(apiKey: string): McpServer {
       description:
         "Get a single transcription by ID, including speaker-attributed segments with timestamps",
       inputSchema: { id: z.string().uuid().describe("The transcription ID") },
-      annotations: { title: "Get transcription", readOnlyHint: true },
+      annotations: {
+        title: "Get transcription",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ id }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -250,7 +300,12 @@ export function createServer(apiKey: string): McpServer {
       description:
         "Get the transcript for a specific note. Returns structured segments if available, or raw text for older notes.",
       inputSchema: { id: z.string().uuid().describe("The note ID") },
-      annotations: { title: "Get note transcript", readOnlyHint: true },
+      annotations: {
+        title: "Get note transcript",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ id }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -277,7 +332,12 @@ export function createServer(apiKey: string): McpServer {
           .describe("Number of entries to return (1-500)"),
         cursor: z.string().optional().describe("Pagination cursor from a previous response"),
       },
-      annotations: { title: "List dictionary", readOnlyHint: true },
+      annotations: {
+        title: "List dictionary",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ limit, cursor }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -291,7 +351,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Add dictionary words",
       description:
-        "Add words, names, or jargon the user wants transcription to spell exactly. Words already in the dictionary are returned rather than duplicated.",
+        "Add words, names, or jargon the user wants transcription to spell exactly. A case-insensitive match updates the existing entry's capitalisation and can restore a deleted word. List existing words first; skip matches unless the user requested a change.",
       inputSchema: {
         words: z
           .array(z.string().min(1).max(100))
@@ -299,7 +359,12 @@ export function createServer(apiKey: string): McpServer {
           .max(200)
           .describe("Words to add (1-200, each 1-100 characters)"),
       },
-      annotations: { title: "Add dictionary words", readOnlyHint: false, destructiveHint: false },
+      annotations: {
+        title: "Add dictionary words",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Array<Record<string, unknown>> }>({
@@ -321,7 +386,12 @@ export function createServer(apiKey: string): McpServer {
         id: z.string().uuid().describe("The dictionary entry ID to update"),
         word: z.string().min(1).max(100).describe("New spelling"),
       },
-      annotations: { title: "Update dictionary word", readOnlyHint: false, destructiveHint: true },
+      annotations: {
+        title: "Update dictionary word",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ id, ...updates }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -340,7 +410,12 @@ export function createServer(apiKey: string): McpServer {
       title: "Delete dictionary word",
       description: "Remove a word from the dictionary",
       inputSchema: { id: z.string().uuid().describe("The dictionary entry ID to delete") },
-      annotations: { title: "Delete dictionary word", readOnlyHint: false, destructiveHint: true },
+      annotations: {
+        title: "Delete dictionary word",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ id }) => {
       await apiRequest({ method: "DELETE", path: `/dictionary/${id}`, apiKey });
@@ -363,7 +438,12 @@ export function createServer(apiKey: string): McpServer {
           .describe("Number of snippets to return (1-500)"),
         cursor: z.string().optional().describe("Pagination cursor from a previous response"),
       },
-      annotations: { title: "List snippets", readOnlyHint: true },
+      annotations: {
+        title: "List snippets",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ limit, cursor }) => {
       const query: Record<string, string> = { limit: String(limit) };
@@ -377,7 +457,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Create snippet",
       description:
-        "Create a snippet: a spoken trigger phrase that expands into replacement text during dictation",
+        "Create a snippet: a spoken trigger phrase that expands into replacement text during dictation. An existing trigger (case-insensitive) is overwritten; check existing snippets and confirm before replacing one.",
       inputSchema: {
         trigger: z.string().min(1).max(100).describe("Spoken phrase that triggers the expansion"),
         replacement: z
@@ -386,7 +466,12 @@ export function createServer(apiKey: string): McpServer {
           .max(5000)
           .describe("Text inserted when the trigger is spoken"),
       },
-      annotations: { title: "Create snippet", readOnlyHint: false, destructiveHint: false },
+      annotations: {
+        title: "Create snippet",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async (input) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -410,7 +495,12 @@ export function createServer(apiKey: string): McpServer {
         trigger: z.string().min(1).max(100).optional().describe("New trigger phrase"),
         replacement: z.string().min(1).max(5000).optional().describe("New replacement text"),
       },
-      annotations: { title: "Update snippet", readOnlyHint: false, destructiveHint: true },
+      annotations: {
+        title: "Update snippet",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ id, ...updates }) => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
@@ -429,7 +519,12 @@ export function createServer(apiKey: string): McpServer {
       title: "Delete snippet",
       description: "Delete a snippet",
       inputSchema: { id: z.string().uuid().describe("The snippet ID to delete") },
-      annotations: { title: "Delete snippet", readOnlyHint: false, destructiveHint: true },
+      annotations: {
+        title: "Delete snippet",
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ id }) => {
       await apiRequest({ method: "DELETE", path: `/snippets/${id}`, apiKey });
@@ -462,7 +557,12 @@ export function createServer(apiKey: string): McpServer {
         language: z.string().optional().describe("Language code (e.g. 'en' or 'pt-BR')"),
         prompt: z.string().optional().describe("Names or jargon to spell correctly"),
       },
-      annotations: { title: "Transcribe audio", readOnlyHint: false, destructiveHint: false },
+      annotations: {
+        title: "Transcribe audio",
+        readOnlyHint: false,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ audio_base64, mime_type, language, prompt }) => {
       if (audio_base64.length > MAX_AUDIO_BASE64_CHARS) {
@@ -495,7 +595,12 @@ export function createServer(apiKey: string): McpServer {
       title: "Get usage",
       description: "Get usage statistics, word counts, and plan details",
       inputSchema: {},
-      annotations: { title: "Get usage", readOnlyHint: true },
+      annotations: {
+        title: "Get usage",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     },
     async () => {
       const { data } = await apiRequest<{ data: Record<string, unknown> }>({
