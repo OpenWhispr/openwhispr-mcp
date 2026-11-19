@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization, Mcp-Session-Id, MCP-Protocol-Version"
   );
-  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id, WWW-Authenticate");
+  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id, WWW-Authenticate, Retry-After");
 
   if (req.method === "OPTIONS") {
     res.status(200).end();
@@ -53,6 +53,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const token = await validateToken(apiKey);
   if (token.status === "invalid") {
     unauthorized(res, "The access token is invalid, expired, or revoked", "invalid_token");
+    return;
+  }
+  if (token.status === "forbidden") {
+    res.status(403).json({ error: token.code, error_description: token.description });
+    return;
+  }
+  if (token.status === "rate_limited") {
+    if (token.retryAfter !== null) res.setHeader("Retry-After", token.retryAfter);
+    res.status(429).json({
+      error: "rate_limited",
+      error_description: "Too many OpenWhispr credential checks. Try again later.",
+    });
     return;
   }
   if (token.status === "unavailable") {
