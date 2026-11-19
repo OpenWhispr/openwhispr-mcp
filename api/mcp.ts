@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { toNodeHandler } from "@modelcontextprotocol/node";
+import { createMcpHandler } from "@modelcontextprotocol/server";
 import { createServer } from "../lib/server.js";
 import {
   MCP_SCOPES,
@@ -72,11 +73,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const server = createServer(apiKey);
-
-  // Stateless — no session persistence needed for serverless
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-
-  await server.connect(transport);
-  await transport.handleRequest(req, res, req.body);
+  // Stateless: a fresh server per request, scoped to this caller's key. The handler answers
+  // the 2026-07-28 protocol directly and serves 2025-era clients, which still open with
+  // `initialize`, through the SDK's stateless legacy fallback.
+  const mcp = createMcpHandler(() => createServer(apiKey));
+  await toNodeHandler(mcp)(req, res, req.body);
 }
