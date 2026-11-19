@@ -28,17 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  if (req.method === "GET") {
-    res.status(200).json({
-      name: "OpenWhispr",
-      version: "1.0.0",
-      description:
-        "Access your OpenWhispr notes, folders, transcriptions, dictionary, snippets, and usage stats, and transcribe audio with OpenWhispr Cloud",
-    });
-    return;
-  }
-
+  // Streamable HTTP clients GET this endpoint to listen for server-sent messages. A stateless
+  // server has none, and 405 is how the spec says so: any 200 reads as a stream that just
+  // closed, which clients reopen every second for as long as they stay connected.
   if (req.method !== "POST") {
+    res.setHeader("Allow", "POST, OPTIONS");
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
