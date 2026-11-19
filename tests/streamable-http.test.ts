@@ -7,7 +7,7 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import handler from "../api/mcp.js";
 import { MCP_SCOPES } from "../lib/auth.js";
 
-test("a GET for a server stream is refused with 405 so clients do not reconnect every second", async () => {
+async function request(method: string) {
   const result = { status: 0, headers: {} as Record<string, string> };
   const res = {
     setHeader(name: string, value: string) {
@@ -18,10 +18,25 @@ test("a GET for a server stream is refused with 405 so clients do not reconnect 
       return this;
     },
     json() {},
+    end() {},
   };
-  await handler({ method: "GET" } as VercelRequest, res as unknown as VercelResponse);
+  await handler({ method } as VercelRequest, res as unknown as VercelResponse);
+  return result;
+}
+
+test("a GET for a server stream is refused with 405 so clients do not reconnect every second", async () => {
+  const result = await request("GET");
   assert.equal(result.status, 405);
   assert.equal(result.headers.Allow, "POST, OPTIONS");
+});
+
+test("the CORS preflight allows the headers a 2026-07-28 browser client sends on every request", async () => {
+  const result = await request("OPTIONS");
+  assert.equal(result.status, 200);
+  const allowed = result.headers["Access-Control-Allow-Headers"].toLowerCase().split(", ");
+  for (const header of ["mcp-protocol-version", "mcp-method", "mcp-name"]) {
+    assert.ok(allowed.includes(header), header);
+  }
 });
 
 // Serves the real handler over HTTP the way Vercel calls it (parsed body, status/json helpers),
