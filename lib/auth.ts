@@ -85,37 +85,33 @@ const policyDescriptions = {
     "Your organization's policy could not be resolved. Contact your workspace admin.",
 } as const;
 
-type ForbiddenToken = {
-  status: "forbidden";
-  code: keyof typeof policyDescriptions | "forbidden";
-  description: string;
-};
+type PolicyCode = keyof typeof policyDescriptions;
+
+function isPolicyCode(code: string): code is PolicyCode {
+  return Object.hasOwn(policyDescriptions, code);
+}
 
 export type TokenValidation =
-  | { status: "valid"; scopes: string[]; expiresAt: string | null }
-  | ForbiddenToken
+  | { status: "valid"; scopes: string[] }
+  | { status: "forbidden"; code: PolicyCode | "forbidden"; description: string }
   | { status: "invalid" }
   | { status: "rate_limited"; retryAfter: string | null }
   | { status: "unavailable" };
 
-const forbiddenBody = z.object({
+const apiErrorBody = z.object({
   error: z.object({
     code: z.string(),
     message: z.string().trim().min(1).max(512).catch(""),
   }),
 });
 
-async function forbiddenToken(res: Response): Promise<ForbiddenToken> {
-  const body = forbiddenBody.safeParse(await res.json().catch(() => null));
-  if (body.success) {
-    const { code, message } = body.data.error;
-    for (const policyCode of ["api_access_disabled", "policy_unresolvable"] as const) {
-      const fallback = policyDescriptions[policyCode];
-      // Older APIs returned both policy denials with the generic forbidden code.
-      if (code.toLowerCase() === policyCode || (code === "forbidden" && message === fallback)) {
-        return { status: "forbidden", code: policyCode, description: message || fallback };
-      }
-    }
+async function forbiddenToken(res: Response): Promise<TokenValidation> {
+  const body = apiErrorBody.safeParse(await res.json().catch(() => null));
+  // Without the API's error body the 403 came from the edge (e.g. Vercel's firewall), not a policy.
+  if (!body.success) return { status: "unavailable" };
+  const { code, message } = body.data.error;
+  if (isPolicyCode(code)) {
+    return { status: "forbidden", code, description: message || policyDescriptions[code] };
   }
   return {
     status: "forbidden",
@@ -125,16 +121,13 @@ async function forbiddenToken(res: Response): Promise<ForbiddenToken> {
 }
 
 function parseRetryAfter(value: string | null): string | null {
-  if (value === null || /^\d+$/.test(value)) return value;
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) && date.toUTCString() === value ? value : null;
+  return value !== null && /^\d+$/.test(value) ? value : null;
 }
 
 export async function validateToken(token: string): Promise<TokenValidation> {
   try {
     // Claude gives up on a tool call after 10 s; a hung API must not consume all of it.
     const res = await fetch(apiUrl("/me?purpose=mcp-auth"), {
-      cache: "no-store",
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(8_000),
     });
@@ -148,10 +141,8 @@ export async function validateToken(token: string): Promise<TokenValidation> {
     }
     if (!res.ok) return { status: "unavailable" };
 
-    const { data } = (await res.json()) as {
-      data: { scopes: string[]; expires_at: string | null };
-    };
-    return { status: "valid", scopes: data.scopes, expiresAt: data.expires_at };
+    const { data } = (await res.json()) as { data: { scopes: string[] } };
+    return { status: "valid", scopes: data.scopes };
   } catch {
     return { status: "unavailable" };
   }

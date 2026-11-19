@@ -38,7 +38,10 @@ async function post(token: string, body: typeof discovery): Promise<HandlerResul
 
 for (const [code, message] of [
   ["api_access_disabled", disabledMessage],
-  ["policy_unresolvable", "Your organization's policy could not be resolved."],
+  [
+    "policy_unresolvable",
+    "Your organization's policy could not be resolved. Contact your workspace admin.",
+  ],
 ]) {
   for (const warm of [false, true]) {
     test(`${code} blocks discovery and calls with a ${warm ? "previously validated" : "new"} token`, async () => {
@@ -48,11 +51,10 @@ for (const [code, message] of [
         assert.equal(url.pathname, "/api/v1/me");
         assert.equal(url.search, "?purpose=mcp-auth");
         assert.equal(init.method ?? "GET", "GET");
-        assert.equal(init.cache, "no-store");
         assert.equal(new Headers(init.headers).get("Authorization"), `Bearer ${token}`);
         return blocked
           ? Response.json({ error: { code, message } }, { status: 403 })
-          : Response.json({ data: { scopes: ["notes:read"], expires_at: null } });
+          : Response.json({ data: { scopes: ["notes:read"] } });
       });
       if (warm) {
         assert.equal((await validateToken(token)).status, "valid");
@@ -71,34 +73,36 @@ for (const [code, message] of [
   }
 }
 
-test("legacy policy denials and other forbidden responses retain HTTP 403", async () => {
-  let upstream = Response.json(
-    { error: { code: "forbidden", message: disabledMessage } },
-    { status: 403 }
+test("an unrecognised API error code is a generic 403 that hides its detail", async () => {
+  mock.method(globalThis, "fetch", async () =>
+    Response.json({ error: { code: "unknown", message: "private detail" } }, { status: 403 })
   );
-  mock.method(globalThis, "fetch", async () => upstream);
-  const legacy = await post("legacy", discovery);
-  assert.equal(legacy.status, 403);
-  assert.deepEqual(legacy.body, {
-    error: "api_access_disabled",
-    error_description: disabledMessage,
-  });
+  const denied = await post("unknown-code", discovery);
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body?.error, "forbidden");
+  assert.doesNotMatch(denied.body.error_description, /private detail/);
+  assert.equal(denied.headers["WWW-Authenticate"], undefined);
+});
 
-  for (upstream of [
-    Response.json({ error: { code: "unknown", message: "private detail" } }, { status: 403 }),
-    new Response("private detail", { status: 403 }),
-  ]) {
-    const generic = await post("generic", discovery);
-    assert.equal(generic.status, 403);
-    assert.equal(generic.body?.error, "forbidden");
-    assert.doesNotMatch(generic.body.error_description, /private detail/);
-    assert.equal(generic.headers["WWW-Authenticate"], undefined);
+test("a 403 without the API's error body is treated as upstream unavailable", async () => {
+  const edgeBlocks = [
+    (): Response => new Response("<html>Forbidden</html>", { status: 403 }),
+    (): Response => Response.json({ message: "Forbidden" }, { status: 403 }),
+  ];
+  for (const edgeBlock of edgeBlocks) {
+    mock.method(globalThis, "fetch", async () => edgeBlock());
+    for (const body of [discovery, toolCall]) {
+      const result = await post("edge-block", body);
+      assert.equal(result.status, 503);
+      assert.equal(result.body?.error, "upstream_unavailable");
+    }
+    mock.restoreAll();
   }
 });
 
 test("a known policy code retains its meaning when its description is missing", async () => {
   mock.method(globalThis, "fetch", async () =>
-    Response.json({ error: { code: "API_ACCESS_DISABLED" } }, { status: 403 })
+    Response.json({ error: { code: "api_access_disabled" } }, { status: 403 })
   );
   const denied = await post("missing-description", discovery);
   assert.deepEqual(denied.body, {
@@ -115,7 +119,7 @@ test("token, scope and upstream failures retain their existing responses", async
   assert.equal(invalid.body?.error, "invalid_token");
   assert.match(invalid.headers["WWW-Authenticate"], /invalid_token/);
 
-  upstream = Response.json({ data: { scopes: [], expires_at: null } });
+  upstream = Response.json({ data: { scopes: [] } });
   const missingScope = await post("limited", toolCall);
   assert.equal(missingScope.status, 403);
   assert.equal(missingScope.body?.error, "insufficient_scope");
@@ -141,7 +145,7 @@ test("a throttled credential check returns 429 with valid retry guidance", async
   for (const [value, expected] of [
     ["0", "0"],
     ["47", "47"],
-    ["Thu, 19 Nov 2026 12:00:00 GMT", "Thu, 19 Nov 2026 12:00:00 GMT"],
+    ["Thu, 19 Nov 2026 12:00:00 GMT", undefined],
     ["private upstream details", undefined],
     ["-1", undefined],
     [null, undefined],
