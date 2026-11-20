@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { z } from "zod";
 import { apiUrl } from "./client.js";
 
@@ -80,44 +79,70 @@ export function requiredToolScopes(body: unknown): McpScope[] {
   return [...scopes];
 }
 
-type ValidToken = { status: "valid"; scopes: string[]; expiresAt: string | null };
-export type TokenValidation = ValidToken | { status: "invalid" } | { status: "unavailable" };
+const policyDescriptions = {
+  api_access_disabled: "Your organization has turned off API and MCP access.",
+  policy_unresolvable:
+    "Your organization's policy could not be resolved. Contact your workspace admin.",
+} as const;
 
-const CACHE_TTL_MS = 60_000;
-const CACHE_MAX_ENTRIES = 1000;
-const cache = new Map<string, { result: ValidToken; expiresAt: number }>();
+type PolicyCode = keyof typeof policyDescriptions;
+
+function isPolicyCode(code: string): code is PolicyCode {
+  return Object.hasOwn(policyDescriptions, code);
+}
+
+export type TokenValidation =
+  | { status: "valid"; scopes: string[] }
+  | { status: "forbidden"; code: PolicyCode | "forbidden"; description: string }
+  | { status: "invalid" }
+  | { status: "rate_limited"; retryAfter: string | null }
+  | { status: "unavailable" };
+
+const apiErrorBody = z.object({
+  error: z.object({
+    code: z.string(),
+    message: z.string().trim().min(1).max(512).catch(""),
+  }),
+});
+
+async function forbiddenToken(res: Response): Promise<TokenValidation> {
+  const body = apiErrorBody.safeParse(await res.json().catch(() => null));
+  // Without the API's error body the 403 came from the edge (e.g. Vercel's firewall), not a policy.
+  if (!body.success) return { status: "unavailable" };
+  const { code, message } = body.data.error;
+  if (isPolicyCode(code)) {
+    return { status: "forbidden", code, description: message || policyDescriptions[code] };
+  }
+  return {
+    status: "forbidden",
+    code: "forbidden",
+    description: "OpenWhispr API access was denied",
+  };
+}
+
+function parseRetryAfter(value: string | null): string | null {
+  return value !== null && /^\d+$/.test(value) ? value : null;
+}
 
 export async function validateToken(token: string): Promise<TokenValidation> {
-  const key = createHash("sha256").update(token).digest("hex");
-  const cached = cache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.result;
-  cache.delete(key);
-
   try {
     // Claude gives up on a tool call after 10 s; a hung API must not consume all of it.
-    const res = await fetch(apiUrl("/me"), {
+    const res = await fetch(apiUrl("/me?purpose=mcp-auth"), {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(8_000),
     });
     if (res.status === 401) return { status: "invalid" };
+    if (res.status === 403) return await forbiddenToken(res);
+    if (res.status === 429) {
+      return {
+        status: "rate_limited",
+        retryAfter: parseRetryAfter(res.headers.get("Retry-After")),
+      };
+    }
     if (!res.ok) return { status: "unavailable" };
 
-    const { data } = (await res.json()) as {
-      data: { scopes: string[]; expires_at: string | null };
-    };
-    const result: ValidToken = { status: "valid", scopes: data.scopes, expiresAt: data.expires_at };
-
-    if (cache.size >= CACHE_MAX_ENTRIES) {
-      const oldest = cache.keys().next().value;
-      if (oldest) cache.delete(oldest);
-    }
-    // Never serve a cached result past the token's own expiry.
-    const ttl = Date.now() + CACHE_TTL_MS;
-    cache.set(key, {
-      result,
-      expiresAt: result.expiresAt ? Math.min(ttl, Date.parse(result.expiresAt)) : ttl,
-    });
-    return result;
+    const { data } = (await res.json()) as { data: { scopes: string[] } };
+    return { status: "valid", scopes: data.scopes };
   } catch {
     return { status: "unavailable" };
   }
