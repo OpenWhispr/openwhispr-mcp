@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { apiRequest } from "./client.js";
 
@@ -23,18 +23,23 @@ const AUDIO_EXTENSIONS: Record<string, string> = {
 };
 
 export function createServer(apiKey: string): McpServer {
-  const server = new McpServer({ name: "OpenWhispr", version: "1.0.0" });
+  // The tool list is fixed, so say so: a client that is told it can change holds a
+  // `subscriptions/listen` stream open for its whole session waiting for updates.
+  const server = new McpServer(
+    { name: "OpenWhispr", version: "1.0.0" },
+    { capabilities: { tools: { listChanged: false } } }
+  );
 
   server.registerTool(
     "list_notes",
     {
       title: "List notes",
       description: "List notes with optional folder filtering and cursor pagination",
-      inputSchema: {
+      inputSchema: z.object({
         limit: z.number().min(1).max(100).default(50).describe("Number of notes to return (1-100)"),
         cursor: z.string().optional().describe("Pagination cursor from a previous response"),
         folder_id: z.string().uuid().optional().describe("Filter by folder ID"),
-      },
+      }),
       annotations: {
         title: "List notes",
         readOnlyHint: true,
@@ -55,7 +60,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Get note",
       description: "Get a single note by ID",
-      inputSchema: { id: z.string().uuid().describe("The note ID") },
+      inputSchema: z.object({ id: z.string().uuid().describe("The note ID") }),
       annotations: {
         title: "Get note",
         readOnlyHint: true,
@@ -78,7 +83,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Create note",
       description: "Create a new note",
-      inputSchema: {
+      inputSchema: z.object({
         content: z.string().describe("The note content"),
         title: z.string().optional().describe("Optional title"),
         note_type: z
@@ -86,7 +91,7 @@ export function createServer(apiKey: string): McpServer {
           .default("personal")
           .describe("Type of note"),
         folder_id: z.string().uuid().optional().describe("Folder to place the note in"),
-      },
+      }),
       annotations: {
         title: "Create note",
         readOnlyHint: false,
@@ -110,13 +115,13 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Update note",
       description: "Update a note's title, content, or folder",
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string().uuid().describe("The note ID to update"),
         title: z.string().optional().describe("New title"),
         content: z.string().optional().describe("New content"),
         enhanced_content: z.string().optional().describe("New enhanced/cleaned content"),
         folder_id: z.string().uuid().optional().describe("Move to a different folder"),
-      },
+      }),
       annotations: {
         title: "Update note",
         readOnlyHint: false,
@@ -140,7 +145,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Delete note",
       description: "Delete a note",
-      inputSchema: { id: z.string().uuid().describe("The note ID to delete") },
+      inputSchema: z.object({ id: z.string().uuid().describe("The note ID to delete") }),
       annotations: {
         title: "Delete note",
         readOnlyHint: false,
@@ -159,10 +164,10 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Search notes",
       description: "Search notes using semantic and full-text search",
-      inputSchema: {
+      inputSchema: z.object({
         query: z.string().min(1).max(500).describe("Search query"),
         limit: z.number().min(1).max(50).default(20).describe("Max results to return"),
-      },
+      }),
       annotations: {
         title: "Search notes",
         readOnlyHint: true,
@@ -186,7 +191,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "List folders",
       description: "List all folders",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: {
         title: "List folders",
         readOnlyHint: true,
@@ -209,10 +214,10 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Create folder",
       description: "Create a new folder",
-      inputSchema: {
+      inputSchema: z.object({
         name: z.string().min(1).max(100).describe("Folder name"),
         sort_order: z.number().int().optional().describe("Sort position"),
-      },
+      }),
       annotations: {
         title: "Create folder",
         readOnlyHint: false,
@@ -237,7 +242,7 @@ export function createServer(apiKey: string): McpServer {
       title: "List transcriptions",
       description:
         "List transcription history with cursor pagination. Supports filtering by language or linked note.",
-      inputSchema: {
+      inputSchema: z.object({
         limit: z
           .number()
           .min(1)
@@ -251,7 +256,7 @@ export function createServer(apiKey: string): McpServer {
           .string()
           .optional()
           .describe("Set to 'segments' to include speaker-attributed segments with timestamps"),
-      },
+      }),
       annotations: {
         title: "List transcriptions",
         readOnlyHint: true,
@@ -275,7 +280,7 @@ export function createServer(apiKey: string): McpServer {
       title: "Get transcription",
       description:
         "Get a single transcription by ID, including speaker-attributed segments with timestamps",
-      inputSchema: { id: z.string().uuid().describe("The transcription ID") },
+      inputSchema: z.object({ id: z.string().uuid().describe("The transcription ID") }),
       annotations: {
         title: "Get transcription",
         readOnlyHint: true,
@@ -299,7 +304,7 @@ export function createServer(apiKey: string): McpServer {
       title: "Get note transcript",
       description:
         "Get the transcript for a specific note. Returns structured segments if available, or raw text for older notes.",
-      inputSchema: { id: z.string().uuid().describe("The note ID") },
+      inputSchema: z.object({ id: z.string().uuid().describe("The note ID") }),
       annotations: {
         title: "Get note transcript",
         readOnlyHint: true,
@@ -323,7 +328,7 @@ export function createServer(apiKey: string): McpServer {
       title: "List dictionary",
       description:
         "List the user's custom dictionary: words and names that transcription should spell exactly. Paginate with cursor while has_more is true.",
-      inputSchema: {
+      inputSchema: z.object({
         limit: z
           .number()
           .min(1)
@@ -331,7 +336,7 @@ export function createServer(apiKey: string): McpServer {
           .default(200)
           .describe("Number of entries to return (1-500)"),
         cursor: z.string().optional().describe("Pagination cursor from a previous response"),
-      },
+      }),
       annotations: {
         title: "List dictionary",
         readOnlyHint: true,
@@ -352,13 +357,13 @@ export function createServer(apiKey: string): McpServer {
       title: "Add dictionary words",
       description:
         "Add words, names, or jargon the user wants transcription to spell exactly. A case-insensitive match updates the existing entry's capitalisation and can restore a deleted word. List existing words first; skip matches unless the user requested a change.",
-      inputSchema: {
+      inputSchema: z.object({
         words: z
           .array(z.string().min(1).max(100))
           .min(1)
           .max(200)
           .describe("Words to add (1-200, each 1-100 characters)"),
-      },
+      }),
       annotations: {
         title: "Add dictionary words",
         readOnlyHint: false,
@@ -382,10 +387,10 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Update dictionary word",
       description: "Change the spelling of a dictionary entry",
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string().uuid().describe("The dictionary entry ID to update"),
         word: z.string().min(1).max(100).describe("New spelling"),
-      },
+      }),
       annotations: {
         title: "Update dictionary word",
         readOnlyHint: false,
@@ -409,7 +414,9 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Delete dictionary word",
       description: "Remove a word from the dictionary",
-      inputSchema: { id: z.string().uuid().describe("The dictionary entry ID to delete") },
+      inputSchema: z.object({
+        id: z.string().uuid().describe("The dictionary entry ID to delete"),
+      }),
       annotations: {
         title: "Delete dictionary word",
         readOnlyHint: false,
@@ -429,7 +436,7 @@ export function createServer(apiKey: string): McpServer {
       title: "List snippets",
       description:
         "List the user's snippets: spoken trigger phrases that expand into saved text during dictation. Paginate with cursor while has_more is true.",
-      inputSchema: {
+      inputSchema: z.object({
         limit: z
           .number()
           .min(1)
@@ -437,7 +444,7 @@ export function createServer(apiKey: string): McpServer {
           .default(200)
           .describe("Number of snippets to return (1-500)"),
         cursor: z.string().optional().describe("Pagination cursor from a previous response"),
-      },
+      }),
       annotations: {
         title: "List snippets",
         readOnlyHint: true,
@@ -458,14 +465,14 @@ export function createServer(apiKey: string): McpServer {
       title: "Create snippet",
       description:
         "Create a snippet: a spoken trigger phrase that expands into replacement text during dictation. An existing trigger (case-insensitive) is overwritten; check existing snippets and confirm before replacing one.",
-      inputSchema: {
+      inputSchema: z.object({
         trigger: z.string().min(1).max(100).describe("Spoken phrase that triggers the expansion"),
         replacement: z
           .string()
           .min(1)
           .max(5000)
           .describe("Text inserted when the trigger is spoken"),
-      },
+      }),
       annotations: {
         title: "Create snippet",
         readOnlyHint: false,
@@ -490,11 +497,11 @@ export function createServer(apiKey: string): McpServer {
       title: "Update snippet",
       description:
         "Update a snippet's trigger phrase or replacement text. Provide at least one field.",
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string().uuid().describe("The snippet ID to update"),
         trigger: z.string().min(1).max(100).optional().describe("New trigger phrase"),
         replacement: z.string().min(1).max(5000).optional().describe("New replacement text"),
-      },
+      }),
       annotations: {
         title: "Update snippet",
         readOnlyHint: false,
@@ -518,7 +525,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Delete snippet",
       description: "Delete a snippet",
-      inputSchema: { id: z.string().uuid().describe("The snippet ID to delete") },
+      inputSchema: z.object({ id: z.string().uuid().describe("The snippet ID to delete") }),
       annotations: {
         title: "Delete snippet",
         readOnlyHint: false,
@@ -538,7 +545,7 @@ export function createServer(apiKey: string): McpServer {
       title: "Transcribe audio",
       description:
         "Transcribe a short audio clip (up to 3 MB) with OpenWhispr Cloud. Beta: requires a Pro or Business plan and the transcriptions:write scope; 600 minutes per month. For longer files use the OpenWhispr CLI, which can also transcribe locally for free.",
-      inputSchema: {
+      inputSchema: z.object({
         audio_base64: z
           .string()
           .min(1)
@@ -556,7 +563,7 @@ export function createServer(apiKey: string): McpServer {
         ]),
         language: z.string().optional().describe("Language code (e.g. 'en' or 'pt-BR')"),
         prompt: z.string().optional().describe("Names or jargon to spell correctly"),
-      },
+      }),
       annotations: {
         title: "Transcribe audio",
         readOnlyHint: false,
@@ -594,7 +601,7 @@ export function createServer(apiKey: string): McpServer {
     {
       title: "Get usage",
       description: "Get usage statistics, word counts, and plan details",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: {
         title: "Get usage",
         readOnlyHint: true,
